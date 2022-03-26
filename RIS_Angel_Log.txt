@@ -1,0 +1,8 @@
+Note: INSTALL https://www.manopt.org before initiating.
+
+I'll write here relevant information about this code.
+
+Main function are: 
+SE_Optimization_PSO.m
+EE_Optimization_PSO.m
+
