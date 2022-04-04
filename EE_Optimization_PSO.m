@@ -1,4 +1,5 @@
-%% Angel Labrador
+%% Energy Efficiency Optimization in RIS-Aided Uplink Multi-User MIMO With User-Side Precoding 
+%   Angel Labrador
 clc;
 clearvars;
 
@@ -47,21 +48,18 @@ time_svd=0;
 time_zf=0;
 
 for nm=1:length(Nm)
+    % Var Init
+    Wm_MAT=rand(Nm(nm),UT*B)+1i*rand(Nm(nm),UT*B);
+    Wm_MAT=Wm_MAT/norm(Wm_MAT,'fro');
+    rho_EE=zeros(length(P_max),4,NL,iterations);
+    rho_EEW=zeros(length(P_max),4,NL,iterations);
+    rho_SE=zeros(length(P_max),4,NL,iterations);
+    rho_SEW=zeros(length(P_max),4,NL,iterations);
+    rho_EEWZF=zeros(length(P_max),4,NL,iterations);
+    rho_SEWZF=zeros(length(P_max),4,NL,iterations);
+    W_norm=zeros(length(P_max),UT,NL,iterations);
     
-Wm_MAT=rand(Nm(nm),UT*B)+1i*rand(Nm(nm),UT*B);
-Wm_MAT=Wm_MAT/norm(Wm_MAT,'fro');
-rho_EE=zeros(length(P_max),4,NL,iterations);
-rho_EEW=zeros(length(P_max),4,NL,iterations);
-rho_SE=zeros(length(P_max),4,NL,iterations);
-rho_SEW=zeros(length(P_max),4,NL,iterations);
-rho_EEWZF=zeros(length(P_max),4,NL,iterations);
-rho_SEWZF=zeros(length(P_max),4,NL,iterations);
-
-W_norm=zeros(length(P_max),UT,NL,iterations);
-
-
-
-    
+    % MANOPT_PSO Options
     options.verbosity=0;
     options.stopfun = @mystopfun;
     options.maxiter = 100;
@@ -80,131 +78,132 @@ for nn=1:NL
     for m=1:UT
         H_Am{m}=Ric_model(K_dB,Nr,Nm(nm),L);        % Channel UT-RIS
     end
-for pp=1:length(P_max)
-    Qm0={};
-    Qm0{1,1} = ones(1,length(Q_m))*10^(P_max(pp)/10)/xi;
-    Qm_init= Qm0{1,1};
-    Qm0W=Qm0;
-    Qm0WZF=Qm0;
-
-    Phi0={};
-    Phi0{1,1} = Phi';
-    Phi0W=Phi0;
-    Phi0WZF=Phi0;
-
-    Wm0={};
-    Wm0{1,1} = Wm_MAT/norm(Wm_MAT,'fro');
-    Wm0W=Wm0;
-    Wm0WZF=Wm0;
-
-    %% Initial Random solution AND Max Power Transmit
-    % Criterio w/o prec
-    [~,rho_EE(pp,1,nn,:),rho_SE(pp,1,nn,:)]= rho_fun_PSO(Phi,Qm_init,2,Wm_MAT,H_Am,H_B,'EE',SNR,B,Nr,BW,UT,Nm(nm),xi,P_max(pp),Pcm,P_BS,P_RIS);
-    % Criterio B
-    [~,rho_EEW(pp,1,nn,:),rho_SEW(pp,1,nn,:)]= rho_fun_PSO(Phi,Qm_init,3,Wm_MAT,H_Am,H_B,'EE',SNR,B,Nr,BW,UT,Nm(nm),xi,P_max(pp),Pcm,P_BS,P_RIS);
-    % Criterio prec-ZF
-    [~,rho_EEWZF(pp,1,nn,:),rho_SEWZF(pp,1,nn,:)]= rho_fun_PSO(Phi,Qm_init,4,Wm_MAT,H_Am,H_B,'EE',SNR,B,Nr,BW,UT,Nm(nm),xi,P_max(pp),Pcm,P_BS,P_RIS);
+    for pp=1:length(P_max)
+        Qm0={};
+        Qm0{1,1} = ones(1,length(Q_m))*10^(P_max(pp)/10)/xi;
+        Qm_init= Qm0{1,1};
+        Qm0W=Qm0;
+        Qm0WZF=Qm0;
     
-for optz_iter=1:iterations
-
-
-    %% Q_m Optimization
-    tic
-    % Criterio w/o prec
-    problem1.M = positivefactory(1,UT); 
-    problem1.cost  = @(x) (rho_fun_PSO(Phi,x,2,Wm_MAT,H_Am,H_B,'EE',SNR,B,Nr,BW,UT,Nm(nm),xi,P_max(pp),Pcm,P_BS,P_RIS));
-    [Q_m_new, ~, ~, ~] = pso(problem1, Qm0, options);
-    Qm0=mat2cell(Q_m_new,1);
-    [~,rho_EE(pp,2,nn,optz_iter),rho_SE(pp,2,nn,optz_iter)]=rho_fun_PSO(Phi,Q_m_new,2,Wm_MAT,H_Am,H_B,'EE',SNR,B,Nr,BW,UT,Nm(nm),xi,P_max(pp),Pcm,P_BS,P_RIS);
-    time_wo=toc+time_wo;
-    % Criterio B
-    tic
-    problem1W.M = positivefactory(1,UT);
-    problem1W.cost  = @(x) rho_fun_PSO(Phi,x,3,Wm_MAT,H_Am,H_B,'EE',SNR,B,Nr,BW,UT,Nm(nm),xi,P_max(pp),Pcm,P_BS,P_RIS);
-    [Q_m_newW, ~, ~, ~] = pso(problem1W, Qm0W, options);
-    Qm0W=mat2cell(Q_m_newW,1);
-    [~,rho_EEW(pp,2,nn,optz_iter),rho_SEW(pp,2,nn,optz_iter)]=rho_fun_PSO(Phi,Q_m_newW,3,Wm_MAT,H_Am,H_B,'EE',SNR,B,Nr,BW,UT,Nm(nm),xi,P_max(pp),Pcm,P_BS,P_RIS);
-    time_svd=toc+time_svd;
-    % Criterio prec-ZF
-    tic
-    problem1WZF.M = positivefactory(1,UT);
-    problem1WZF.cost  = @(x) rho_fun_PSO(Phi,x,4,Wm_MAT,H_Am,H_B,'EE',SNR,B,Nr,BW,UT,Nm(nm),xi,P_max(pp),Pcm,P_BS,P_RIS);
-    [Q_m_newWZF, ~, ~, ~] = pso(problem1WZF, Qm0WZF, options);
-    Qm0WZF=mat2cell(Q_m_newWZF,1);
-    [~,rho_EEWZF(pp,2,nn,optz_iter),rho_SEWZF(pp,2,nn,optz_iter)]=rho_fun_PSO(Phi,Q_m_newWZF,4,Wm_MAT,H_Am,H_B,'EE',SNR,B,Nr,BW,UT,Nm(nm),xi,P_max(pp),Pcm,P_BS,P_RIS);
-    time_zf=toc+time_zf;
-%%    Phi Optimization
+        Phi0={};
+        Phi0{1,1} = Phi';
+        Phi0W=Phi0;
+        Phi0WZF=Phi0;
     
-
-    % Criterio w/o prec
-    tic
-    problem2.M = complexcirclefactory(Nr);
-    problem2.cost  = @(x) rho_fun_PSO(x,Q_m_new,2,Wm_MAT,H_Am,H_B,'EE',SNR,B,Nr,BW,UT,Nm(nm),xi,P_max(pp),Pcm,P_BS,P_RIS);    
-    [theta_new, ~, ~, ~] = pso(problem2, Phi0, options);
-    Phi0=mat2cell(theta_new,Nr);
-    [~,rho_EE(pp,3,nn,optz_iter),rho_SE(pp,3,nn,optz_iter)]=rho_fun_PSO(theta_new,Q_m_new,2,Wm_MAT,H_Am,H_B,'EE',SNR,B,Nr,BW,UT,Nm(nm),xi,P_max(pp),Pcm,P_BS,P_RIS);    
-    time_wo=toc+time_wo;
-    % Criterio B
-    tic
-    problem2W.M = complexcirclefactory(Nr);
-    problem2W.cost  = @(x) rho_fun_PSO(x,Q_m_newW,3,Wm_MAT,H_Am,H_B,'EE',SNR,B,Nr,BW,UT,Nm(nm),xi,P_max(pp),Pcm,P_BS,P_RIS);    
-    [theta_newW, ~, ~, ~] = pso(problem2W, Phi0W, options);
-        Phi0W=mat2cell(theta_newW,Nr);
-    [~,rho_EEW(pp,3,nn,optz_iter),rho_SEW(pp,3,nn,optz_iter)]=rho_fun_PSO(theta_newW,Q_m_newW,3,Wm_MAT,H_Am,H_B,'EE',SNR,B,Nr,BW,UT,Nm(nm),xi,P_max(pp),Pcm,P_BS,P_RIS);    
-    time_svd=toc+time_svd;
-    % Criterio prec-ZF
-    tic
-    problem2WZF.M = complexcirclefactory(Nr);
-    problem2WZF.cost  = @(x) rho_fun_PSO(x,Q_m_newWZF,4,Wm_MAT,H_Am,H_B,'EE',SNR,B,Nr,BW,UT,Nm(nm),xi,P_max(pp),Pcm,P_BS,P_RIS);    
-    [theta_newWZF, ~, ~, ~] = pso(problem2WZF, Phi0WZF, options);
-        Phi0WZF=mat2cell(theta_newWZF,Nr);
-    [~,rho_EEWZF(pp,3,nn,optz_iter),rho_SEWZF(pp,3,nn,optz_iter)]=rho_fun_PSO(theta_newWZF,Q_m_newWZF,4,Wm_MAT,H_Am,H_B,'EE',SNR,B,Nr,BW,UT,Nm(nm),xi,P_max(pp),Pcm,P_BS,P_RIS);    
-    time_zf=toc+time_zf;
-  %% W optz
-    Wm0={};
-    Wm0{1,1} = Wm_MAT/norm(Wm_MAT,'fro');
+        Wm0={};
+        Wm0{1,1} = Wm_MAT/norm(Wm_MAT,'fro');
+        Wm0W=Wm0;
+        Wm0WZF=Wm0;
     
-    % Criterio w/o prec
-    tic
-    problem3.M = spherecomplexfactory(Nm(nm),UT*B); % obliquecomplexfactory  euclideancomplexfactory
-    problem3.cost  = @(x) rho_fun_PSO(theta_new,Q_m_new,1,x,H_Am,H_B,'EE',SNR,B,Nr,BW,UT,Nm(nm),xi,P_max(pp),Pcm,P_BS,P_RIS);
-    [W_m_new, ~, ~, ~] = pso(problem3, Wm0, options);
-    Wm0=mat2cell(W_m_new,B,Nr);
-    W_m_cell=mat2cell(W_m_new,Nm(nm),ones(1,UT)*B);
-    for uu=1:UT
-        W_norm(pp,uu,nn,optz_iter)=norm(W_m_cell{uu},2);
+        %% Initial Random solution AND Max Power Transmit
+        % Criterio w/o prec
+        [~,rho_EE(pp,1,nn,:),rho_SE(pp,1,nn,:)]= rho_fun_PSO(Phi,Qm_init,2,Wm_MAT,H_Am,H_B,'EE',SNR,B,Nr,BW,UT,Nm(nm),xi,P_max(pp),Pcm,P_BS,P_RIS);
+        % Criterio B
+        [~,rho_EEW(pp,1,nn,:),rho_SEW(pp,1,nn,:)]= rho_fun_PSO(Phi,Qm_init,3,Wm_MAT,H_Am,H_B,'EE',SNR,B,Nr,BW,UT,Nm(nm),xi,P_max(pp),Pcm,P_BS,P_RIS);
+        % Criterio prec-ZF
+        [~,rho_EEWZF(pp,1,nn,:),rho_SEWZF(pp,1,nn,:)]= rho_fun_PSO(Phi,Qm_init,4,Wm_MAT,H_Am,H_B,'EE',SNR,B,Nr,BW,UT,Nm(nm),xi,P_max(pp),Pcm,P_BS,P_RIS);
+        
+        for optz_iter=1:iterations
+        
+        
+            %% Q_m Optimization
+            tic
+            % Criterio w/o prec
+            problem1.M = positivefactory(1,UT); 
+            problem1.cost  = @(x) (rho_fun_PSO(Phi,x,2,Wm_MAT,H_Am,H_B,'EE',SNR,B,Nr,BW,UT,Nm(nm),xi,P_max(pp),Pcm,P_BS,P_RIS));
+            [Q_m_new, ~, ~, ~] = pso(problem1, Qm0, options);
+            Qm0=mat2cell(Q_m_new,1);
+            [~,rho_EE(pp,2,nn,optz_iter),rho_SE(pp,2,nn,optz_iter)]=rho_fun_PSO(Phi,Q_m_new,2,Wm_MAT,H_Am,H_B,'EE',SNR,B,Nr,BW,UT,Nm(nm),xi,P_max(pp),Pcm,P_BS,P_RIS);
+            time_wo=toc+time_wo;
+            % Criterio B
+            tic
+            problem1W.M = positivefactory(1,UT);
+            problem1W.cost  = @(x) rho_fun_PSO(Phi,x,3,Wm_MAT,H_Am,H_B,'EE',SNR,B,Nr,BW,UT,Nm(nm),xi,P_max(pp),Pcm,P_BS,P_RIS);
+            [Q_m_newW, ~, ~, ~] = pso(problem1W, Qm0W, options);
+            Qm0W=mat2cell(Q_m_newW,1);
+            [~,rho_EEW(pp,2,nn,optz_iter),rho_SEW(pp,2,nn,optz_iter)]=rho_fun_PSO(Phi,Q_m_newW,3,Wm_MAT,H_Am,H_B,'EE',SNR,B,Nr,BW,UT,Nm(nm),xi,P_max(pp),Pcm,P_BS,P_RIS);
+            time_svd=toc+time_svd;
+            % Criterio prec-ZF
+            tic
+            problem1WZF.M = positivefactory(1,UT);
+            problem1WZF.cost  = @(x) rho_fun_PSO(Phi,x,4,Wm_MAT,H_Am,H_B,'EE',SNR,B,Nr,BW,UT,Nm(nm),xi,P_max(pp),Pcm,P_BS,P_RIS);
+            [Q_m_newWZF, ~, ~, ~] = pso(problem1WZF, Qm0WZF, options);
+            Qm0WZF=mat2cell(Q_m_newWZF,1);
+            [~,rho_EEWZF(pp,2,nn,optz_iter),rho_SEWZF(pp,2,nn,optz_iter)]=rho_fun_PSO(Phi,Q_m_newWZF,4,Wm_MAT,H_Am,H_B,'EE',SNR,B,Nr,BW,UT,Nm(nm),xi,P_max(pp),Pcm,P_BS,P_RIS);
+            time_zf=toc+time_zf;
+        %%    Phi Optimization
+            
+        
+            % Criterio w/o prec
+            tic
+            problem2.M = complexcirclefactory(Nr);
+            problem2.cost  = @(x) rho_fun_PSO(x,Q_m_new,2,Wm_MAT,H_Am,H_B,'EE',SNR,B,Nr,BW,UT,Nm(nm),xi,P_max(pp),Pcm,P_BS,P_RIS);    
+            [theta_new, ~, ~, ~] = pso(problem2, Phi0, options);
+            Phi0=mat2cell(theta_new,Nr);
+            [~,rho_EE(pp,3,nn,optz_iter),rho_SE(pp,3,nn,optz_iter)]=rho_fun_PSO(theta_new,Q_m_new,2,Wm_MAT,H_Am,H_B,'EE',SNR,B,Nr,BW,UT,Nm(nm),xi,P_max(pp),Pcm,P_BS,P_RIS);    
+            time_wo=toc+time_wo;
+            % Criterio B
+            tic
+            problem2W.M = complexcirclefactory(Nr);
+            problem2W.cost  = @(x) rho_fun_PSO(x,Q_m_newW,3,Wm_MAT,H_Am,H_B,'EE',SNR,B,Nr,BW,UT,Nm(nm),xi,P_max(pp),Pcm,P_BS,P_RIS);    
+            [theta_newW, ~, ~, ~] = pso(problem2W, Phi0W, options);
+                Phi0W=mat2cell(theta_newW,Nr);
+            [~,rho_EEW(pp,3,nn,optz_iter),rho_SEW(pp,3,nn,optz_iter)]=rho_fun_PSO(theta_newW,Q_m_newW,3,Wm_MAT,H_Am,H_B,'EE',SNR,B,Nr,BW,UT,Nm(nm),xi,P_max(pp),Pcm,P_BS,P_RIS);    
+            time_svd=toc+time_svd;
+            % Criterio prec-ZF
+            tic
+            problem2WZF.M = complexcirclefactory(Nr);
+            problem2WZF.cost  = @(x) rho_fun_PSO(x,Q_m_newWZF,4,Wm_MAT,H_Am,H_B,'EE',SNR,B,Nr,BW,UT,Nm(nm),xi,P_max(pp),Pcm,P_BS,P_RIS);    
+            [theta_newWZF, ~, ~, ~] = pso(problem2WZF, Phi0WZF, options);
+                Phi0WZF=mat2cell(theta_newWZF,Nr);
+            [~,rho_EEWZF(pp,3,nn,optz_iter),rho_SEWZF(pp,3,nn,optz_iter)]=rho_fun_PSO(theta_newWZF,Q_m_newWZF,4,Wm_MAT,H_Am,H_B,'EE',SNR,B,Nr,BW,UT,Nm(nm),xi,P_max(pp),Pcm,P_BS,P_RIS);    
+            time_zf=toc+time_zf;
+          %% W optz
+            Wm0={};
+            Wm0{1,1} = Wm_MAT/norm(Wm_MAT,'fro');
+            
+            % Criterio w/o prec
+            tic
+            problem3.M = spherecomplexfactory(Nm(nm),UT*B); % obliquecomplexfactory  euclideancomplexfactory
+            problem3.cost  = @(x) rho_fun_PSO(theta_new,Q_m_new,1,x,H_Am,H_B,'EE',SNR,B,Nr,BW,UT,Nm(nm),xi,P_max(pp),Pcm,P_BS,P_RIS);
+            [W_m_new, ~, ~, ~] = pso(problem3, Wm0, options);
+            Wm0=mat2cell(W_m_new,B,Nr);
+            W_m_cell=mat2cell(W_m_new,Nm(nm),ones(1,UT)*B);
+            for uu=1:UT
+                W_norm(pp,uu,nn,optz_iter)=norm(W_m_cell{uu},2);
+            end
+            [~,rho_EE(pp,4,nn,optz_iter),rho_SE(pp,4,nn,optz_iter)]=rho_fun_PSO(theta_new,Q_m_new,1,W_m_new,H_Am,H_B,'EE',SNR,B,Nr,BW,UT,Nm(nm),xi,P_max(pp),Pcm,P_BS,P_RIS);
+            time_wo=toc+time_wo;
+            % Criterio B
+            tic
+            problem3W.M = spherecomplexfactory(Nm(nm),UT*B); % obliquecomplexfactory  euclideancomplexfactory
+            problem3W.cost  = @(x) rho_fun_PSO(theta_newW,Q_m_newW,1,x,H_Am,H_B,'EE',SNR,B,Nr,BW,UT,Nm(nm),xi,P_max(pp),Pcm,P_BS,P_RIS);
+            [W_m_newW, ~, ~, ~] = pso(problem3W, Wm0W, options);
+            Wm0W=mat2cell(W_m_newW,B,Nr);
+            W_m_cell=mat2cell(W_m_newW,Nm(nm),ones(1,UT)*B);
+            for uu=1:UT
+                WW_norm(pp,uu,nn,optz_iter)=norm(W_m_cell{uu},2);
+            end
+            [~,rho_EEW(pp,4,nn,optz_iter),rho_SEW(pp,4,nn,optz_iter)]=rho_fun_PSO(theta_newW,Q_m_newW,1,W_m_newW,H_Am,H_B,'EE',SNR,B,Nr,BW,UT,Nm(nm),xi,P_max(pp),Pcm,P_BS,P_RIS);
+            time_svd=toc+time_svd;
+            % Criterio prec-ZF
+            tic
+            problem3WZF.M = spherecomplexfactory(Nm(nm),UT*B); % obliquecomplexfactory  euclideancomplexfactory
+            problem3WZF.cost  = @(x) rho_fun_PSO(theta_newWZF,Q_m_newWZF,1,x,H_Am,H_B,'EE',SNR,B,Nr,BW,UT,Nm(nm),xi,P_max(pp),Pcm,P_BS,P_RIS);
+            [W_m_newWZF, ~, ~, ~] = pso(problem3WZF, Wm0WZF, options);
+            Wm0WZF=mat2cell(W_m_newWZF,B,Nr);
+            W_m_cell=mat2cell(W_m_newWZF,Nm(nm),ones(1,UT)*B);
+            for uu=1:UT
+                WZF_norm(pp,uu,nn,optz_iter)=norm(W_m_cell{uu},2);
+            end
+            [~,rho_EEWZF(pp,4,nn,optz_iter),rho_SEWZF(pp,4,nn,optz_iter)]=rho_fun_PSO(theta_newWZF,Q_m_newWZF,1,W_m_newWZF,H_Am,H_B,'EE',SNR,B,Nr,BW,UT,Nm(nm),xi,P_max(pp),Pcm,P_BS,P_RIS);
+            time_zf=toc+time_zf;
+        end
+
     end
-    [~,rho_EE(pp,4,nn,optz_iter),rho_SE(pp,4,nn,optz_iter)]=rho_fun_PSO(theta_new,Q_m_new,1,W_m_new,H_Am,H_B,'EE',SNR,B,Nr,BW,UT,Nm(nm),xi,P_max(pp),Pcm,P_BS,P_RIS);
-    time_wo=toc+time_wo;
-    % Criterio B
-    tic
-    problem3W.M = spherecomplexfactory(Nm(nm),UT*B); % obliquecomplexfactory  euclideancomplexfactory
-    problem3W.cost  = @(x) rho_fun_PSO(theta_newW,Q_m_newW,1,x,H_Am,H_B,'EE',SNR,B,Nr,BW,UT,Nm(nm),xi,P_max(pp),Pcm,P_BS,P_RIS);
-    [W_m_newW, ~, ~, ~] = pso(problem3W, Wm0W, options);
-    Wm0W=mat2cell(W_m_newW,B,Nr);
-    W_m_cell=mat2cell(W_m_newW,Nm(nm),ones(1,UT)*B);
-    for uu=1:UT
-        WW_norm(pp,uu,nn,optz_iter)=norm(W_m_cell{uu},2);
-    end
-    [~,rho_EEW(pp,4,nn,optz_iter),rho_SEW(pp,4,nn,optz_iter)]=rho_fun_PSO(theta_newW,Q_m_newW,1,W_m_newW,H_Am,H_B,'EE',SNR,B,Nr,BW,UT,Nm(nm),xi,P_max(pp),Pcm,P_BS,P_RIS);
-    time_svd=toc+time_svd;
-    % Criterio prec-ZF
-    tic
-    problem3WZF.M = spherecomplexfactory(Nm(nm),UT*B); % obliquecomplexfactory  euclideancomplexfactory
-    problem3WZF.cost  = @(x) rho_fun_PSO(theta_newWZF,Q_m_newWZF,1,x,H_Am,H_B,'EE',SNR,B,Nr,BW,UT,Nm(nm),xi,P_max(pp),Pcm,P_BS,P_RIS);
-    [W_m_newWZF, ~, ~, ~] = pso(problem3WZF, Wm0WZF, options);
-    Wm0WZF=mat2cell(W_m_newWZF,B,Nr);
-    W_m_cell=mat2cell(W_m_newWZF,Nm(nm),ones(1,UT)*B);
-    for uu=1:UT
-        WZF_norm(pp,uu,nn,optz_iter)=norm(W_m_cell{uu},2);
-    end
-    [~,rho_EEWZF(pp,4,nn,optz_iter),rho_SEWZF(pp,4,nn,optz_iter)]=rho_fun_PSO(theta_newWZF,Q_m_newWZF,1,W_m_newWZF,H_Am,H_B,'EE',SNR,B,Nr,BW,UT,Nm(nm),xi,P_max(pp),Pcm,P_BS,P_RIS);
-    time_zf=toc+time_zf;
 end
 
-end
-end
-
+% Output values
 rho_EE_mean=mean(rho_EE(:,:,:,end),3);
 rho_EEW_mean=mean(rho_EEW(:,:,:,end),3);
 rho_SE_mean=mean(rho_SE(:,:,:,end),3);
@@ -214,6 +213,7 @@ rho_SEWZF_mean=mean(rho_SEWZF(:,:,:,end),3);
 W_norm_max1=max(max(W_norm(:,:,:,end),[],3),[],2);
 W_norm_max=W_norm_max1/max(W_norm_max1);
 
+% Processing time values
 time_wo=time_wo/iterations/NL;
 time_svd=time_svd/iterations/NL;
 time_zf=time_zf/iterations/NL;
