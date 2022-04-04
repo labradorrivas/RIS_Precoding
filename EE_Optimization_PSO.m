@@ -1,6 +1,6 @@
 %% Angel Labrador
 clc;
-clear all;
+clearvars;
 
 %% Plot IEEE Parameters
     set(0,'DefaultTextFontName','Times','DefaultTextFontSize',14,...
@@ -16,32 +16,32 @@ clear all;
             47  64  80]/255;
         
 %% Scenario Data
-%% Scenario Data
-iterations=100;
-NL=100;       % # Realizations          
-K_dB=3;     % K factor [dB] for the Rician Channel Model
-SNR=0;      % SNR [dB]
-Nm=[8];      % Number of Antennas per UT
-B=8;       % Number of Antennas at BS
-Nr=32;      % Number of RIS elements
-L=1;      % Number of channel realization
-UT=4;       % Number of Users
-BW=100E6;     % Transmission Bandwidth [Hz]
+iterations=10;
+NL=10;          % # Realizations          
+K_dB=3;         % K factor [dB] for the Rician Channel Model
+SNR=0;          % SNR [dB]
+Nm=[8];         % Number of Antennas per UT
+B=8;            % Number of Antennas at BS
+Nr=32;          % Number of RIS elements
+L=1;            % Number of channel realization
+UT=4;           % Number of Users
+BW=100E6;       % Transmission Bandwidth [Hz]
 
 % Power Constant elements
-xi=1;                 % efficiency of the transmit power amplifiers adopted at UT $m$
+xi=1;                   % efficiency of the transmit power amplifiers adopted at UT $m$
 Pcm=10;                 % Power circutry each user [dbm]
 P_BS=39;                % Power at BS [dbm] 
     % a maximum output power limit of 38 dBm for medium range BSs, 24 dBm for local area BSs, and of 20 dBm for home BSs
 P_RIS=5;                % Power of each RIS element [dbm]
-P_max=(-10:5:35);      % Max power per UT [dbm]
+P_max=(-10:5:35);       % Max power per UT [dbm]
 
 % Data Generation
-dsize=1;             % Data Size
-M_order = 2;           % Modulation order
-k = log2(M_order);     % Bits per symbol
+dsize=1;                % Data Size
+M_order = 2;            % Modulation order
+k = log2(M_order);      % Bits per symbol
 
-%% 
+%%
+% Initialization of time measures
 time_wo=0;
 time_svd=0;
 time_zf=0;
@@ -73,12 +73,12 @@ for nn=1:NL
     [txSig,Q_m]=TransmitedSignaL_v2(UT,Nm(nm),M_order,'PSK');
     diag_Q_m=diag(Q_m);
     %% Random Generate RIS Angle
-theta = (2*pi)*rand(1,Nr);  % Reflecting Angle RIS % ones(1,Nr);%
-Phi = (exp(1i*theta));      % Phase shift Matrix for RIS, % Set Amp = 1 ones(1,Nr);%
+    theta = (2*pi)*rand(1,Nr);  % Reflecting Angle RIS % ones(1,Nr);%
+    Phi = (exp(1i*theta));      % Phase shift Matrix for RIS, % Set Amp = 1 ones(1,Nr);%
     H_Am=cell(1,UT);
     H_B=Ric_model(K_dB,B,Nr,L); % Channel RIS-BS
     for m=1:UT
-    H_Am{m}=Ric_model(K_dB,Nr,Nm(nm),L);        % Channel UT-RIS
+        H_Am{m}=Ric_model(K_dB,Nr,Nm(nm),L);        % Channel UT-RIS
     end
 for pp=1:length(P_max)
     Qm0={};
@@ -316,7 +316,7 @@ save(strcat('optz_EE_xi_',string(xi) ,'_',datestr(now,'yyyymmddHHMMSS')));
 % saveas(gcf,strcat('normW_optz_EE_xi_',string(xi)),'epsc'); % ,'_',datestr(now,'yyyymmddHHMMSS')
 % 
 % 
-% rho_Nm_W(:,(2*nm-1):(2*nm))=[rho_SEW_mean(:,4) rho_EEW_mean(:,4)];
+rho_Nm_W(:,(2*nm-1):(2*nm))=[rho_SEW_mean(:,4) rho_EEW_mean(:,4)];
 % 
   markers=["-s";"-o";"-x";"-p";"-+";"-v";"-h";"-*";":^";":>"];
 
